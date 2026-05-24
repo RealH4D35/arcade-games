@@ -6,54 +6,53 @@
 #include "interactable.h"
 #include <vector>
 
-/**
- * Hallway level class
- * Manages hallway background, interactables, and collision boundaries
- */
-class HallwayLevel 
-{
+class HallwayLevel {
 private:
-    bitmap background;                    // Background bitmap
-    float original_width, original_height; // Original image dimensions
-    float scaled_width, scaled_height;    // Scaled dimensions for screen
-    float scale_factor;                   // Scaling factor
-    float y_offset;                       // Vertical offset for centering
-    float ground_level;                   // Walkable ground level
-    float left_boundary_offset;           // Offset from left edge to playable area
-    float floor_offset;                   // Offset from bottom to floor level
-    
-    std::vector<Interactable> interactables; // List of interactable objects
-    Interactable* nearby_interactable;       // Currently nearby interactable
+    bitmap background;
+    float original_width, original_height;
+    float scaled_width, scaled_height;
+    float scale_factor;
+    float y_offset;                    // vertical centering offset
+
+    float world_left_boundary;         // left wall X
+    float world_right_boundary;        // right wall X
+    float ground_level;                // floor Y
+    float ceiling_level;               // ceiling Y
+
+    float image_offset_x;              // where the image's left edge sits relative to world_left
+
+    std::vector<Interactable> interactables;
+    Interactable* nearby_interactable;
+    bool show_boundaries;
 
 public:
-    HallwayLevel();                         // Constructor
-    
-    // Level lifecycle methods
-    void load();                            // Load level resources
-    void unload();                          // Unload level resources
-    
-    // Update and render
-    void update(Player& player);            // Update level state
-    void draw(const point_2d& camera_pos) const; // Draw level
-    
-    // Collision and interaction
-    void check_boundaries(Player& player);  // Check player boundaries
-    void check_interactions(const Player& player); // Check for interactions
-    
-    // Getters
+    HallwayLevel();
+
+    void load();
+    void unload();
+    void update(Player& player);
+    void draw(const point_2d& camera_pos) const;
+
+    void check_boundaries(Player& player);
+    void check_interactions(const Player& player);
+
     float get_ground_level() const { return ground_level; }
     float get_y_offset() const { return y_offset; }
-    float get_left_boundary_offset() const { return left_boundary_offset; }
-    float get_floor_offset() const { return floor_offset; }
+    float get_world_left_boundary() const { return world_left_boundary; }
+    float get_world_right_boundary() const { return world_right_boundary; }
+
     Interactable* get_nearby_interactable() const { return nearby_interactable; }
     const std::vector<Interactable>& get_interactables() const { return interactables; }
     const bitmap& get_background() const { return background; }
-    
-    // Setup methods
-    void setup_interactables();             // Initialize interactable objects
-    
-    // Interaction triggers
-    void trigger_interaction(const std::string& id); // Trigger specific interaction
+
+    void set_show_boundaries(bool show) { show_boundaries = show; }
+    bool get_show_boundaries() const { return show_boundaries; }
+
+    void setup_interactables();
+    void trigger_interaction(const std::string& id);
+
+private:
+    void draw_boundaries(const point_2d& camera_pos) const;
 };
 
 #endif

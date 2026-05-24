@@ -1,229 +1,183 @@
 #include "hallwaylevel.h"
 #include <iostream>
+#include <sstream>
 
-/**
- * HallwayLevel constructor
- * Initializes with default values in declaration order
- */
-HallwayLevel::HallwayLevel() : 
-    original_width(0), 
-    original_height(0),
-    scaled_width(0), 
-    scaled_height(0),
-    scale_factor(0), 
-    y_offset(0), 
-    ground_level(0),
-    left_boundary_offset(0),  // New: offset from left edge of image to playable area
-    floor_offset(0),          // New: offset from bottom of image to floor
-    nearby_interactable(nullptr)
-{
-    // Initialization complete - resources loaded in load() method
-}
+HallwayLevel::HallwayLevel()
+    : original_width(0), original_height(0),
+      scaled_width(0), scaled_height(0),
+      scale_factor(0), y_offset(0),
+      world_left_boundary(0), world_right_boundary(0),
+      ground_level(0), ceiling_level(0),
+      image_offset_x(0),
+      nearby_interactable(nullptr),
+      show_boundaries(true)
+{}
 
-/**
- * Load hallway level resources
- * Loads background image and sets up level geometry
- */
-void HallwayLevel::load() 
+void HallwayLevel::load()
 {
-    // Load hallway background image (UPDATED: Using Apartment Hallway.png)
     background = load_bitmap("hallway_bg", "assets/envs/Apartment Hallway.png");
-    
-    if (!background) 
-    {
+    if (!background) {
         write_line("ERROR: Could not load hallway background!");
         return;
     }
-    
-    // Calculate scaling and positioning
-    original_width = bitmap_width(background);
+
+    original_width  = bitmap_width(background);
     original_height = bitmap_height(background);
-    
-    write_line("Loaded Apartment Hallway.png - Dimensions: " + 
+    write_line("Loaded Apartment Hallway.png - Dimensions: " +
                std::to_string(original_width) + "x" + std::to_string(original_height));
-    
-    // IMPORTANT: Adjust these values based on your image!
-    // ====================================================
-    // left_boundary_offset: How many pixels from the LEFT edge of the image 
-    //                       is the actual playable hallway area?
-    // Example: If there's 100px of empty wall/space on the left, set to 100
-    left_boundary_offset = -100.0f;  // ADJUST THIS!
-    
-    // floor_offset: How many pixels from the BOTTOM of the image 
-    //               is the actual floor level?
-    // Example: If the floor visually appears 50px from bottom, set to 50
-    floor_offset = 150.0f;  // ADJUST THIS!
-    // ====================================================
-    
-    // Scale to fit screen height
+
     const float TARGET_HEIGHT = 450.0f;
     scale_factor = TARGET_HEIGHT / original_height;
     scaled_height = original_height * scale_factor;
-    scaled_width = original_width * scale_factor;
-    
-    // Also scale the offsets
-    left_boundary_offset *= scale_factor;
-    floor_offset *= scale_factor;
-    
-    write_line("Scaled dimensions: " + 
-               std::to_string(scaled_width) + "x" + std::to_string(scaled_height) +
-               " (Scale factor: " + std::to_string(scale_factor) + ")");
-    write_line("Adjusted left boundary offset: " + std::to_string(left_boundary_offset));
-    write_line("Adjusted floor offset: " + std::to_string(floor_offset));
-    
-    // Center vertically
-    y_offset = (600.0f - scaled_height) / 2.0f;
-    
-    // Calculate ground level: bottom of image minus floor offset
-    ground_level = scaled_height - floor_offset;
-    
-    write_line("Ground level set to: " + std::to_string(ground_level) + 
-               " (Y offset: " + std::to_string(y_offset) + ")");
-    
-    // Setup interactable objects
+    scaled_width  = original_width  * scale_factor;
+
+    // ---------- Explicit world boundaries (independent of image) ----------
+    world_left_boundary  = 10.0f;                         // you can change this
+    world_right_boundary = 1490.0f;                 // or set any value, e.g. 1400
+    // ---------------------------------------------------------------------
+
+    const float FLOOR_OFFSET = 150.0f * scale_factor;   // pixels from image bottom to floor
+    ground_level  = scaled_height - FLOOR_OFFSET;
+    ceiling_level = ground_level - 400.0f;               // playable height
+
+    image_offset_x = 125.0f;    // left edge of image aligns with world_left_boundary
+    y_offset = (600.0f - scaled_height) / 2.0f;         // vertical centering
+
+    write_line("World boundaries: left=" + std::to_string(world_left_boundary) +
+               " right=" + std::to_string(world_right_boundary) +
+               " ground=" + std::to_string(ground_level) +
+               " ceiling=" + std::to_string(ceiling_level));
+
     setup_interactables();
-    
     write_line("Hallway level loaded successfully");
 }
 
-/**
- * Unload hallway level resources
- * Cleans up level data
- */
-void HallwayLevel::unload() 
+void HallwayLevel::unload()
 {
     nearby_interactable = nullptr;
     interactables.clear();
 }
 
-/**
- * Update hallway level state
- * @param player Reference to player for potential updates
- */
-void HallwayLevel::update(Player& player) 
+void HallwayLevel::update(Player& player)
 {
-    // Update all interactables (animations, timers, etc.)
-    for (auto& interactable : interactables) 
-    {
-        interactable.update();
-    }
+    for (auto& i : interactables) i.update();
 }
 
-/**
- * Draw hallway level
- * @param camera_pos Current camera position for parallax/scrolling
- */
-void HallwayLevel::draw(const point_2d& camera_pos) const 
+void HallwayLevel::draw(const point_2d& camera_pos) const
 {
-    // Clear the screen to black before drawing hallway
     clear_screen(COLOR_BLACK);
-    
-    // Calculate draw position based on camera
-    // Apply left_boundary_offset to shift the image so the playable area aligns with screen
-    float draw_x = -camera_pos.x - left_boundary_offset;
+
+    // Draw background image using image_offset_x
+    float image_world_x = world_left_boundary + image_offset_x;
+    float draw_x = image_world_x - camera_pos.x;
     float draw_y = y_offset - camera_pos.y;
-    
-    // Draw scaled background
     drawing_options opts = option_scale_bmp(scale_factor, scale_factor);
     draw_bitmap(background, draw_x, draw_y, opts);
-    
-    // Draw all interactable objects
-    for (const auto& interactable : interactables) 
-    {
-        interactable.draw(camera_pos, y_offset);
-    }
-    
-    // Debug: Draw ground level line (remove in production)
-    // draw_line(COLOR_RED, 0, y_offset + ground_level - camera_pos.y, 
-    //           800, y_offset + ground_level - camera_pos.y);
-    // Debug: Draw left boundary line (remove in production)
-    // draw_line(COLOR_BLUE, left_boundary_offset, 0, 
-    //           left_boundary_offset, 600);
+
+    for (const auto& i : interactables)
+        i.draw(camera_pos, y_offset);
+
+    if (show_boundaries)
+        draw_boundaries(camera_pos);
 }
 
-/**
- * Check player boundaries in hallway
- * @param player Player to check boundaries for
- */
-void HallwayLevel::check_boundaries(Player& player) 
+void HallwayLevel::draw_boundaries(const point_2d& camera_pos) const
+{
+    auto wsx = [&](float world_x) { return world_x - camera_pos.x; };
+    auto wsy = [&](float world_y) { return world_y - camera_pos.y + y_offset; };
+
+    color fl_ceil = COLOR_RED;
+    color wall    = COLOR_GREEN;
+
+    // Floor
+    float sf = wsy(ground_level);
+    draw_line(fl_ceil, 0, sf, 800, sf);
+    draw_text("FLOOR", fl_ceil, 10, sf - 20);
+
+    // Ceiling
+    float sc = wsy(ceiling_level);
+    draw_line(fl_ceil, 0, sc, 800, sc);
+    draw_text("CEILING", fl_ceil, 10, sc + 5);
+
+    // Left wall
+    float sl = wsx(world_left_boundary);
+    if (sl >= -50 && sl <= 850) {
+        draw_line(wall, sl, 0, sl, 600);
+        draw_text("LEFT WALL", wall, sl + 5, 100);
+    }
+
+    // Right wall
+    float sr = wsx(world_right_boundary);
+    if (sr >= -50 && sr <= 850) {
+        draw_line(wall, sr, 0, sr, 600);
+        draw_text("RIGHT WALL", wall, sr - 80, 100);
+    } else {
+        draw_text("RIGHT WALL: " + std::to_string((int)world_right_boundary), wall, 600, 100);
+    }
+}
+
+void HallwayLevel::check_boundaries(Player& player)
 {
     point_2d pos = player.get_position();
-    const float SPRITE_HALF_WIDTH = 48.0f;
-    
-    // Left boundary: left_boundary_offset is where the actual playable area starts
-    // So the left wall is at left_boundary_offset
-    const float LEFT_BOUNDARY = left_boundary_offset + SPRITE_HALF_WIDTH;
-    if (pos.x < LEFT_BOUNDARY) 
-    {
-        pos.x = LEFT_BOUNDARY;
-    }
-    
-    // Ground collision
-    if (pos.y > ground_level) 
-    {
+    const float HALF_WIDTH = Player::HITBOX_WIDTH / 2.0f;
+
+    // Left wall
+    const float LEFT_WALL = world_left_boundary + HALF_WIDTH;
+    if (pos.x < LEFT_WALL) pos.x = LEFT_WALL;
+
+    // Right wall
+    const float RIGHT_WALL = world_right_boundary - HALF_WIDTH;
+    if (pos.x > RIGHT_WALL) pos.x = RIGHT_WALL;
+
+    // Floor
+    if (pos.y > ground_level) {
         pos.y = ground_level;
-        if (!player.get_is_grounded() && player.get_state() == STATE_FALL) 
-        {
+        if (!player.get_is_grounded() && player.get_state() == STATE_FALL)
             player.set_state(STATE_IDLE);
-        }
         player.set_grounded(true);
+        player.on_land();   // <-- NEW: resets double jump & dash cooldown
     }
-    
-    // Apply corrected position
+
+    // Ceiling
+    if (pos.y < ceiling_level) {
+        pos.y = ceiling_level;
+        player.stop_vertical_movement();
+    }
+
     player.set_position(pos);
 }
 
-/**
- * Check for player interactions with objects
- * @param player Player to check interactions for
- */
-void HallwayLevel::check_interactions(const Player& player) 
+void HallwayLevel::check_interactions(const Player& player)
 {
     nearby_interactable = nullptr;
-    
-    // Check proximity to each interactable
-    for (auto& interactable : interactables) 
-    {
-        if (interactable.check_collision(player.get_position())) 
-        {
-            nearby_interactable = &interactable;
-            break;  // Only one nearby interactable at a time
+    for (auto& i : interactables) {
+        if (i.check_collision(player.get_position())) {
+            nearby_interactable = &i;
+            break;
         }
     }
 }
 
-/**
- * Setup hallway interactable objects
- * Creates doors and other interactive elements
- */
-void HallwayLevel::setup_interactables() 
+void HallwayLevel::setup_interactables()
 {
     interactables.clear();
     nearby_interactable = nullptr;
-    
-    // Add apartment doors along hallway
-    // Format: ID, X, Y, Width, Height, Label
-    
-    interactables.push_back(Interactable("door1", 80.0f, ground_level - 85.0f, 40.0f, 60.0f, "Apartment 101"));
-    interactables.push_back(Interactable("door2", 240.0f, ground_level - 85.0f, 40.0f, 60.0f, "Apartment 102"));
-    interactables.push_back(Interactable("door3", 390.0f, ground_level - 85.0f, 40.0f, 60.0f, "Apartment 103"));
-    interactables.push_back(Interactable("door5", 880.0f, ground_level - 85.0f, 40.0f, 60.0f, "Apartment 105"));
-    interactables.push_back(Interactable("door6", 1050.0f, ground_level - 85.0f, 40.0f, 60.0f, "Apartment 106"));
-    interactables.push_back(Interactable("door7", 1210.0f, ground_level - 85.0f, 40.0f, 60.0f, "Apartment 107"));
-    interactables.push_back(Interactable("hexit", 1435.0f, ground_level - 25.0f, 40.0f, 60.0f, "Exit To Lobby"));
+
+    // Doors placed in world coordinates (relative to boundaries)
+    interactables.push_back(Interactable("door1", 90.0f,  ground_level - 85.0f, 40.0f, 60.0f, "Apartment 101"));
+    interactables.push_back(Interactable("door2", 250.0f, ground_level - 85.0f, 40.0f, 60.0f, "Apartment 102"));
+    interactables.push_back(Interactable("door3", 400.0f, ground_level - 85.0f, 40.0f, 60.0f, "Apartment 103"));
+    interactables.push_back(Interactable("door5", 890.0f, ground_level - 85.0f, 40.0f, 60.0f, "Apartment 105"));
+    interactables.push_back(Interactable("door6", 1060.0f, ground_level - 85.0f, 40.0f, 60.0f, "Apartment 106"));
+    interactables.push_back(Interactable("door7", 1220.0f, ground_level - 85.0f, 40.0f, 60.0f, "Apartment 107"));
+    interactables.push_back(Interactable("hexit", 1445.0f, ground_level - 25.0f, 40.0f, 60.0f, "Exit To Lobby"));
 }
 
-/**
- * Trigger interaction with specific object
- * @param id ID of interactable to trigger
- */
-void HallwayLevel::trigger_interaction(const std::string& id) 
+void HallwayLevel::trigger_interaction(const std::string& id)
 {
-    for (auto& interactable : interactables) 
-    {
-        if (interactable.get_id() == id && !interactable.get_is_triggered()) 
-        {
-            interactable.trigger();
+    for (auto& i : interactables) {
+        if (i.get_id() == id && !i.get_is_triggered()) {
+            i.trigger();
             break;
         }
     }

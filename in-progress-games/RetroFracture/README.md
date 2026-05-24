@@ -9,30 +9,35 @@ RetroFracture is a multi-genre arcade game built in C++ using SplashKit, featuri
 ## 🌟 Features
 
 ### 🎯 Genre-Switching Gameplay
+
 - **Platformer**: Precision jumping and exploration
-- **Run & Slash**: Melee combat with acquired weapons  
-- **Beat 'Em Up**: Combo-based boss battles
-- **Top-Down Shmup**: Vehicle combat
+- **Run & Slash**: Melee combat with acquired weapons 
+- **Beat 'Em Up**: Combo-based boss battles [In Future]
+- **Top-Down Shmup**: Vehicle combat [In Future]
 
 ### 🎨 Visual Style
+
 - **8-bit pixel art** with vibrant neon palette
 - **640×480 resolution** (arcade-perfect)
 - **Smooth animations** and dynamic camera
 
 ### 🕹️ Current Implementation
+
 - Explorable hallway level with multiple apartments
-- Apartment 101 interior (Actual interior to be implimented)
+- **Apartment 101 interior** – fully playable platforming level
 - Player physics and collision
-- Intractable (door, for now) system with prompts
+- Interactable system (doors, prompts)
 - Adaptive HUD
 
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - C++17 compatible compiler (GCC, Clang, or MSVC)
 - [SplashKit SDK](https://splashkit.io/) installed
 
 ### Installation & Building
+
 ```bash
 # Fork and clone the repository
 git clone https://github.com/yourusername/RetroFracture.git
@@ -46,13 +51,14 @@ skm clang++ program.cpp src/*.cpp -o RetroFracture
 ```
 
 ### Controls
-| Key | Action |
-|-----|--------|
-| **A/D** | Move left/right |
-| **W** | Jump |
-| **E** | Interact with objects |
-| **ESC** | Quit game |
-| **R** | Reset position |
+
+| Key     | Action                |
+| ------- | --------------------- |
+| **A/D** | Move left/right       |
+| **W**   | Jump                  |
+| **E**   | Interact with objects |
+| **ESC** | Quit game             |
+| **R**   | Reset position        |
 
 ## 📁 Project Structure
 
@@ -60,7 +66,11 @@ skm clang++ program.cpp src/*.cpp -o RetroFracture
 RetroFracture/
 ├── assets/                   # All game assets
 │   ├── envs/                 # Backgrounds & environments
-│   └── sprites/              # Player animations
+│   │   ├── Apartment Hallway.png
+│   │   └── lvl1_platform.png
+│   └── sprites/              # Player animations (Striker)
+│       ├── striker/          # Striker character spritesheets
+│       └── ui/               # UI elements
 ├── src/                      # Source code
 │   ├── game.cpp/.h           # Main game controller
 │   ├── player.cpp/.h         # Player character & physics
@@ -68,37 +78,42 @@ RetroFracture/
 │   ├── lvl1.cpp/.h           # Apartment 101 level
 │   ├── hud.cpp/.h            # UI & display
 │   └── interactable.cpp/.h   # Interactive objects
+├── include/                  # External dependencies
+│   └── splashkit -> (symlink)
 ├── program.cpp               # Entry point
-└── config.txt                # Arcade mechine config
+├── config.txt                # Arcade machine config
+└── README.md
 ```
 
 ### Architecture Overview
-- **Game Class**: Orchestrates levels, camera, and state
-- **Player Class**: Handles movement, animation, and physics
-- **Level Classes**: Modular level implementations
+
+- **Game Class**: Orchestrates levels, camera, and game state
+- **Player Class**: Handles movement, animation, physics, and input
+- **Level Classes**: Modular level implementations (`HallwayLevel`, `Lvl1`)
 - **HUD Class**: Context-aware UI rendering
-- **Interactable System**: Event-driven interactions
+- **Interactable System**: Event-driven interactions (doors, prompts)
 
 ### Adding New Levels
-1. Create `lvlX.cpp/.h` following existing patterns
-2. Add to `Game` enum and instance variables
-3. Implement transition methods
-4. Add to update/draw switches
+
+1. Create `lvlX.cpp/.h` following the pattern of `lvl1`
+2. Add the new level to the `Game` enum and instance variables
+3. Implement transition methods in `game.cpp`
+4. Add the level to update/draw switches
 
 ## 🗺️ Planned Roadmap
 
 ### Campaign (8 Levels, 2 Levels per Act)
+
 ```
 Act 1:
 ├── ✅ Apartment Hallway
-├── 🔄 Apartments (101 - 107)
-│	- Apartment 101 - Player apartment
-│	- Apartment 102 - Annoyed neighbor 1 apartment
-│	- Apartment 103 - Annoyed neighbor 2 apartment
-│	- Apartment 104 - Abandoned apartment
-│	- Apartment 105 - Angry neighbor apartment
-│	- Apartment 106 - Enemy apartment 1 (Small)
-│	- Apartment 107 & 108 - Enemy apartment 2 (Big)
+├── 🔄 Apartment 101 (Level 1)
+├── 📋 Apartment 102 (Level 2)
+├── 📋 Apartment 103 (Level 3)
+├── 📋 Apartment 104 (Level 4)
+├── 📋 Apartment 105 (Level 5)
+├── 📋 Apartment 106 (Level 6)
+├── 📋 Apartment 107 & Boss
 └── 📋 Rest of apartment complex
 
 Act 2:
@@ -109,13 +124,20 @@ Act 4:
 └── To be decided
 ```
 
+*The "Apartments" are the actually the long form game stage levels* 
+
 ### Coming Soon
+
 - Enemy AI and combat systems
 - Character selection mechanics
 - Music and sound implementation
-- More apartment interiors
+- More apartment interiors (102–107)
 - Lighting/shading effects
 
-### Guidelines
-- Follow existing code style and structure
-- Document complex logic with comments
+## 🤝 Contributing
+
+Contributions are welcome! Please follow the existing code style and document complex logic with comments. For major changes, open an issue first to discuss what you would like to change.
+
+---
+
+*Built with [SplashKit](https://splashkit.io/) – making game development accessible.*

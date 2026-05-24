@@ -5,97 +5,98 @@
 #include <map>
 #include <string>
 
-/**
- * Player state enumeration
- * Defines possible animation states for the player character
- */
-enum PlayerState 
-{
-    STATE_IDLE,     // Standing still
-    STATE_RUN,      // Running left/right
-    STATE_JUMP,     // Jumping upward
-    STATE_FALL      // Falling downward
+enum PlayerState {
+    STATE_IDLE,
+    STATE_RUN,
+    STATE_JUMP,
+    STATE_FALL,
+    STATE_DASH          // new
 };
 
-/**
- * Animation data structure
- * Contains all data needed to render a player animation
- */
-struct Animation 
-{
-    bitmap anim_bitmap;     // Sprite sheet bitmap
-    int frame_count;        // Number of frames in animation
-    int frame_width;        // Width of each frame
-    int frame_height;       // Height of each frame
-    int animation_speed;    // Frame delay (lower = faster)
-    bool loops;             // Whether animation loops
-    std::string name;       // Animation name for debugging
+struct Animation {
+    bitmap anim_bitmap;
+    int frame_count;
+    int frame_width;
+    int frame_height;
+    int animation_speed;
+    bool loops;
+    std::string name;
 };
 
-/**
- * Player character class
- * Manages player movement, physics, animations, and rendering
- */
-class Player 
-{
-private:
-    point_2d position;                      // World position (center bottom)
-    float speed;                            // Horizontal movement speed
-    float jump_force;                       // Initial jump velocity
-    float gravity;                          // Gravity force
-    float vertical_velocity;                // Current vertical speed
-    bool is_grounded;                       // Whether player is on ground
-    bool facing_right;                      // Facing direction
-    
-    PlayerState current_state;              // Current animation state
-    int current_frame_index;                // Current animation frame
-    int animation_timer;                    // Animation frame timer
-    std::map<PlayerState, Animation> animations; // All loaded animations
-    Animation* current_animation;           // Current active animation
-
+class Player {
 public:
-    Player();                               // Constructor
-    
-    // Core methods
-    void update();                          // Update physics and animation
-    void draw();                            // Draw at world position (debug)
-    void draw_at(point_2d screen_position); // Draw at specific screen position
-    
-    // State management
-    void set_state(PlayerState new_state);  // Change animation state
+    static constexpr float HITBOX_WIDTH  = 60.0f;
+    static constexpr float HITBOX_HEIGHT = 90.0f;
+
+    Player();
+
+    void update();
+    void draw();
+    void draw_at(point_2d screen_position);
+    void set_state(PlayerState new_state);
     PlayerState get_state() const { return current_state; }
-    
-    // Movement methods
-    void move_left();                       // Move left
-    void move_right();                      // Move right
-    void jump();                            // Jump if grounded
-    void stop_moving();                     // Stop horizontal movement
-    void stop_vertical_movement();          // Stop vertical movement
-    
-    // Getters and setters
+
+    void move_left();
+    void move_right();
+    void jump();
+    void stop_moving();
+    void stop_vertical_movement();
+
+    // --- new abilities ---
+    void dash();
+    void on_land();                        // call when player touches ground
+    void enable_double_jump(bool enable);
+    void enable_dash(bool enable);
+    bool get_is_dashing() const { return is_dashing; }
+    // --------------------
+
     point_2d get_position() const { return position; }
     void set_position(point_2d new_pos) { position = new_pos; }
     bool get_is_grounded() const { return is_grounded; }
     void set_grounded(bool grounded) { is_grounded = grounded; }
     bool get_facing_right() const { return facing_right; }
-    
-    // Collision detection
-    rectangle get_bounding_box() const;     // Get collision rectangle
-    
-    // Animation info
+
+    rectangle get_bounding_box() const;
+
     int get_current_frame_index() const { return current_frame_index; }
-    std::string get_current_animation_name() const { 
-        return current_animation ? current_animation->name : "None"; 
+    std::string get_current_animation_name() const {
+        return current_animation ? current_animation->name : "None";
     }
-    
+
 private:
-    // Animation management
-    void setup_animations();                                    // Initialize animations
-    void load_animation(const std::string& filename,           // Load specific animation
-                       PlayerState state, 
-                       int frame_count, int frame_width, int frame_height, 
+    point_2d position;
+    float speed;
+    float jump_force;
+    float gravity;
+    float vertical_velocity;
+    bool is_grounded;
+    bool facing_right;
+
+    PlayerState current_state;
+    int current_frame_index;
+    int animation_timer;
+    std::map<PlayerState, Animation> animations;
+    Animation* current_animation;
+
+    // --- double jump ---
+    bool double_jump_enabled;
+    bool double_jump_available;    // true when grounded, consumed by second jump
+
+    // --- dash ---
+    bool dash_enabled;
+    bool is_dashing;
+    int   dash_direction;          // 1 = right, -1 = left
+    float dash_speed;
+    int   dash_frames;
+    int   dash_timer;
+    int   dash_cooldown;
+    int   dash_cooldown_timer;
+
+    void setup_animations();
+    void load_animation(const std::string& filename, PlayerState state,
+                       int frame_count, int frame_width, int frame_height,
                        int speed, bool loops);
-    void update_animation();                                   // Advance animation frames
+    void update_animation();
 };
 
 #endif
